@@ -1,0 +1,76 @@
+name: CI (Build) 
+
+on:
+  push:
+    branches:
+      - main
+      - FINT-*
+  pull_request:
+    branches:
+      - main
+      - FINT-*
+
+permissions: write-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    env:
+      OCTOPUS_SPACE: 'Datadog DASH'
+  
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set Version
+        run: echo "PACKAGE_VERSION=2.10.$((620+GITHUB_RUN_NUMBER))" >> $GITHUB_ENV
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: 'Login to GitHub Container Registry'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+
+      - name: 'Build Docker Image'
+        run: |
+              docker build . --tag ghcr.io/octopussolutionsengineering/octofx-trading:${{env.PACKAGE_VERSION}}
+              docker push ghcr.io/octopussolutionsengineering/octofx-trading:${{env.PACKAGE_VERSION}}
+
+      - name: Login to Octopus Deploy 
+        uses: OctopusDeploy/login@v1
+        with: 
+          server: https://demo.octopus.app
+          service_account_id: 6eb6b6d6-74c6-43da-b563-b1022930ed74
+
+      - name: Push Build Information (Metadata)
+        uses: OctopusDeploy/push-build-information-action@v3       
+        with:
+          version: ${{env.PACKAGE_VERSION}}
+          packages: octopussolutionsengineering/octofx-trading
+          
+      - name: Create Octopus Release
+        uses: OctopusDeploy/create-release-action@v3
+        with: 
+          project: 'OctoFX trading'
+          release_number: ${{ env.PACKAGE_VERSION }}
+          release_notes: 'GitHub Commits URL: ${{ github.event.pull_request.commits_url }}'
+
+      - name: Deploy a release in Octopus Deploy 🐙
+        uses: OctopusDeploy/deploy-release-action@v3
+        with:
+          project: 'OctoFX trading'
+          release_number: ${{env.PACKAGE_VERSION}}
+          environments: Development
