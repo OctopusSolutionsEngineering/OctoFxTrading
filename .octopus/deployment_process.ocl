@@ -1,5 +1,19 @@
+step "production-approval" {
+    name = "Production approval"
+
+    action {
+        action_type = "Octopus.Manual"
+        environments = ["production"]
+        properties = {
+            Octopus.Action.Manual.BlockConcurrentDeployments = "False"
+            Octopus.Action.Manual.Instructions = "Does this release have a change request with all tasks completed? "
+            Octopus.Action.Manual.ResponsibleTeamIds = "space-managers"
+        }
+    }
+}
+
 step "hello-world" {
-    name = "Hello world!"
+    name = "Run custom script"
 
     action {
         action_type = "Octopus.Script"
@@ -8,6 +22,65 @@ step "hello-world" {
             Octopus.Action.Script.ScriptSource = "Inline"
             Octopus.Action.Script.Syntax = "PowerShell"
             OctopusUseBundledTooling = "False"
+        }
+        worker_pool = "hosted-windows"
+    }
+}
+
+process_template "deploy-portal-listing-microservice" {
+    name = "Deploy Portal Listing microservice"
+    process_template_slug = "microservice-template"
+    version_mask = "1.X"
+
+    parameter "Infrastructure.Target.Tag" {
+        value = "octofx-k8s"
+    }
+
+    parameter "Infrastructure.WorkerPool" {
+        value = "WorkerPools-468"
+    }
+
+    parameter "Project.Database.Name" {
+        value = "asdf"
+    }
+
+    parameter "Project.Database.Server" {
+        value = "asdf"
+    }
+
+    parameter "Project.Database.UserName" {
+        value = "asdf"
+    }
+
+    parameter "Project.Database.UserPass" {
+        value = "asdf"
+    }
+
+    parameter "Project.Kubernetes.Manifest.Repo" {
+        value = "asdf"
+    }
+
+    parameter "Project.Kubernetes.Manifest.FilePath" {
+        value = "asdf"
+    }
+
+    parameter "Project.Kubernetes.Namespace" {
+        value = "asdf"
+    }
+}
+
+step "notify-sre-team" {
+    name = "Notify SRE team"
+
+    action {
+        properties = {
+            Octopus.Action.Template.Id = "ActionTemplates-361"
+            Octopus.Action.Template.Version = "15"
+            ssn_Channel = "asdf"
+            ssn_Color = "good"
+            ssn_HookUrl = "#{asdf}"
+            ssn_IconUrl = "https://octopus.com/content/resources/favicon.png"
+            ssn_Username = "Octopus Deploy"
         }
         worker_pool = "hosted-windows"
     }
